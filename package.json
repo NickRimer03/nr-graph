@@ -1,0 +1,23 @@
+{
+  "name": "nr-graph",
+  "version": "1.0.0",
+  "description": "Observable graph",
+  "main": "index.js",
+  "scripts": {
+    "dev": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@vcs.bingo-boom.ru:ag_shelkoudenko/nr-graph.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "webpack": "^4.30.0",
+    "webpack-cli": "^3.3.1"
+  },
+  "dependencies": {
+    "svg-pan-zoom": "github:ariutta/svg-pan-zoom"
+  }
+}
