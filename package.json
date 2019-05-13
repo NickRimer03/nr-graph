@@ -2,7 +2,7 @@
   "name": "nr-graph",
   "version": "1.0.0",
   "description": "Observable graph",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "dev": "webpack"
   },
