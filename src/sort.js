@@ -1,6 +1,6 @@
 import * as utils from "./utils";
 
-export default ({ graph, rootPoint }) => {
+export default ({ graph, rootPoint = graph.nodes[0].name }) => {
   const ratio = 1.5;
   const startRad = 70;
   const center = { x: 0, y: 0 };
