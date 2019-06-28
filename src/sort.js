@@ -1,95 +1,64 @@
-import * as utils from "./utils";
+import { degToRad } from "./utils";
 
-export default ({ graph, rootPoint = graph.nodes[0].name }) => {
-  const ratio = 1.5;
-  const startRad = 70;
-  const center = { x: 0, y: 0 };
+export default (graph, root, parentNode) => {
+  const points = [];
+  const angleSpace = degToRad(360);
+  const nodeRadiusStart = 40;
+  const childrenRadiusStart = 200;
 
-  const tree = utils.graphToTreeWidthSearch(graph, rootPoint);
-  tree.weights = utils.getAllGraphWeights(graph);
-  tree.angles = {};
-  tree.angleSpaces = {};
-  tree.radiuses = {};
+  points.push({ id: root.acid, name: root.name, parent: null, x: 0, y: 0, r: nodeRadiusStart * 2, o: 1 });
 
-  let totalPoints = [];
-  totalPoints.push({
-    id: rootPoint,
-    x: center.x,
-    y: center.y,
-    r: startRad,
-    parentId: null,
-    level: 0
-  });
-  tree.angles[rootPoint] = 0;
-  tree.angleSpaces[rootPoint] = utils.degToRad(360);
-  tree.radiuses[0] = 0;
+  (function sort({ id, center: { x: cx, y: cy }, radius, nodeRadius, opacity, parentAngle, parentNode }) {
+    const children = graph.getChildren(id);
+    const onePart = angleSpace / children.length;
+    const delta = onePart / 2;
+    let parentDelta = 0;
 
-  for (let level in tree.nodes) {
-    const depth = +level + 1;
-    const currRad = startRad / ratio ** depth;
-    let levelPoints = [];
-    let overlap = false;
+    if (parentNode) {
+      const angle = delta + parentAngle + degToRad(180);
+      parentDelta = degToRad(180) - angle;
+    }
 
-    do {
-      overlap = false;
-      levelPoints.length = 0;
-      tree.nodes[level].forEach(node => {
-        const connections = graph.getChildren(node);
-        if (connections.length > 0) {
-          let radius = 0;
-          const angleSpace = tree.angleSpaces[node];
-          if (!tree.radiuses.hasOwnProperty(depth)) {
-            radius = utils.getRadius(tree.radiuses[level], currRad * ratio, currRad, tree.nodes[depth].length);
-            tree.radiuses[depth] = radius;
-          } else {
-            radius = tree.radiuses[depth];
-          }
+    children.forEach((child, idx) => {
+      const { acid, name } = graph.getNode(child);
+      const angle = onePart * idx + delta + parentAngle + degToRad(180) + parentDelta;
+      const x = Math.round((cx + radius * Math.sin(angle)) * 100000) / 100000;
+      const y = Math.round((cy + radius * Math.cos(angle)) * 100000) / 100000;
 
-          const weightSum = connections.map(e => tree.weights[e]).reduce((s, c) => s + c, 0);
-          const onePart = angleSpace / weightSum;
-          const sectors = [];
-          const points = [];
+      points.push({ id: acid, name, parent: id, x, y, r: nodeRadius, o: opacity });
 
-          connections.forEach(childNode => {
-            const sector = onePart * tree.weights[childNode];
-            const previousSum = sectors.reduce((s, c) => s + c, 0);
-            let angle, delta;
-            if (depth === 1) {
-              delta = sector / 2;
-            } else {
-              delta = sector / 2 - angleSpace / 2;
-            }
-            angle = tree.angles[node] + previousSum + delta;
-            sectors.push(sector);
-
-            const nodeX = center.x + radius * Math.sin(angle);
-            const nodeY = center.y + radius * Math.cos(angle);
-            points.push({
-              id: childNode,
-              x: nodeX,
-              y: nodeY,
-              r: currRad,
-              parentId: node,
-              level: depth
-            });
-
-            tree.angles[childNode] = angle;
-            tree.angleSpaces[childNode] = sector;
-          });
-
-          const oldArcLen = utils.getArcLength(tree.radiuses[depth], Math.min(...sectors));
-          // if (+oldArcLen.toFixed(2) < +(currRad * 2).toFixed(2)) {
-          if (Math.round(oldArcLen - currRad * 2) < 0) {
-            tree.radiuses[depth] = utils.getArcRadius(currRad * 2, Math.min(...sectors));
-            overlap = true;
-          } else {
-            levelPoints = levelPoints.concat(points);
-          }
-        }
+      sort({
+        id: acid,
+        center: { x, y },
+        radius: radius * 0.6,
+        nodeRadius: nodeRadius * 0.6,
+        parentAngle: angle,
+        opacity: opacity / 1.75 < 0.15 ? opacity : opacity / 1.75
       });
-    } while (overlap);
-    totalPoints = totalPoints.concat(levelPoints);
-  }
+    });
+  })({
+    id: root.acid,
+    name: root.name,
+    parent: null,
+    center: { x: 0, y: 0 },
+    radius: childrenRadiusStart,
+    nodeRadius: nodeRadiusStart,
+    opacity: 1,
+    parentAngle: degToRad(-180),
+    parentNode
+  });
 
-  return totalPoints;
+  const edges = points.reduce((acc, { x, y, id, name, parent, o }) => {
+    const parentPoint = points.find(({ id }) => id === parent);
+    if (parent !== null) {
+      const { x: x2, y: y2, id: id2, name: name2, o: o2 } = parentPoint;
+      acc.push({
+        p1: { x, y, id, name, o },
+        p2: { x: x2, y: y2, id: id2, name: name2, o: o2 }
+      });
+    }
+    return acc;
+  }, []);
+
+  return { points, edges };
 };
